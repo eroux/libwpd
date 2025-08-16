@@ -32,6 +32,10 @@
 #include <sstream>
 #include <vector>
 
+// Forward declarations for font mapping
+class WPXLegacyFontMap;
+struct WPDExtractionOptions;
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -156,6 +160,9 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	// TODO: Set up extraction options for legacy font mapping
+	// (Currently disabled due to linking issues)
+	
 	librevenge::RVNGString document;
 	librevenge::RVNGTextTextGenerator documentGenerator(document, isInfo);
 	WPDResult error = WPDocument::parse(&input, &documentGenerator, password);
@@ -175,6 +182,8 @@ int main(int argc, char *argv[])
 		return 1;
 
 	printf("%s", document.cstr());
+	
+	// TODO: Clean up extraction options when implemented
 
 	return 0;
 }
