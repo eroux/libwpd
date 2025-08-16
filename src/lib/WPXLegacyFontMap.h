@@ -12,6 +12,8 @@ public:
 
     struct FontMap {
         std::unordered_map<unsigned int, std::string> codepointMap; // byte -> UTF-8
+
+        FontMap() : codepointMap() {}
     };
 
     static std::shared_ptr<WPXLegacyFontMap> loadFromJSON(const std::string &path, std::string &errMsg);
