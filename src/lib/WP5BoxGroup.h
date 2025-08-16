@@ -49,6 +49,7 @@ private:
 	unsigned short m_graphicsOffset;
 	const librevenge::RVNGBinaryData *m_data;
 	std::shared_ptr<WP5SubDocument> m_textSubDocument;
+	std::shared_ptr<WP5SubDocument> m_userDefinedSubDocument; // for WP5_TOP_BOX_GROUP_USER_DEFINED_BOX
 	// Unimplemented to prevent compiler from creating crasher ones
 	WP5BoxGroup(const WP5BoxGroup &);
 	WP5BoxGroup &operator=(const WP5BoxGroup &);

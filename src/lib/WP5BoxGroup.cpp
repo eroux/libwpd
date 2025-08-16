@@ -33,6 +33,10 @@
 #include "WP5SubDocument.h"
 #include "WPXContentListener.h"
 
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+
 WP5BoxGroup::WP5BoxGroup(librevenge::RVNGInputStream *input, WPXEncryption *encryption) :
 	WP5VariableLengthGroup(),
 	m_boxNumber(0),
@@ -45,23 +49,61 @@ WP5BoxGroup::WP5BoxGroup(librevenge::RVNGInputStream *input, WPXEncryption *encr
 	m_boxType(0),
 	m_graphicsOffset(0),
 	m_data(nullptr),
-	m_textSubDocument()
+	m_textSubDocument(),
+	m_userDefinedSubDocument()
 {
 	_read(input, encryption);
 }
 
+static const char *subGroupNameFor(unsigned char sg)
+{
+	switch (sg)
+	{
+	case WP5_TOP_BOX_GROUP_FIGURE:           return "FIGURE";
+	case WP5_TOP_BOX_GROUP_TABLE:            return "TABLE";
+	case WP5_TOP_BOX_GROUP_TEXT_BOX:         return "TEXT_BOX";
+	case WP5_TOP_BOX_GROUP_USER_DEFINED_BOX: return "USER_DEFINED_BOX";
+	case WP5_TOP_BOX_GROUP_EQUATION:         return "EQUATION";
+	case WP5_TOP_BOX_GROUP_HORIZONTAL_LINE:  return "HORIZONTAL_LINE";
+	case WP5_TOP_BOX_GROUP_VERTICAL_LINE:    return "VERTICAL_LINE";
+	default: return "UNKNOWN";
+	}
+}
+
+/* Helper: look ahead for a WP5 variable-length function header.
+   Typical inline subdocument starts with: G (>=0xD0), S (<0x80), LenLE(2 bytes). */
+static bool wp5LooksLikeVLHeader(librevenge::RVNGInputStream *input, WPXEncryption *encryption)
+{
+	long p = (long)input->tell();
+	unsigned char g = 0, s = 0;
+	unsigned short L = 0;
+	// Use the same helpers that honor encryption
+	// NOTE: caller must ensure at least 4 bytes remain; if not, this will simply mis-detect and we restore pos.
+	g = readU8(input, encryption);
+	s = readU8(input, encryption);
+	L = readU16(input, encryption);
+	input->seek(p, librevenge::RVNG_SEEK_SET);
+	(void)L;
+	return (g >= 0xD0) && (s < 0x80);
+}
+
 void WP5BoxGroup::_readContents(librevenge::RVNGInputStream *input, WPXEncryption *encryption)
 {
+	std::fprintf(stderr, "[WP5BoxGroup] \"%s\" box encountered (contentSize=%u)\n",
+	             subGroupNameFor(getSubGroup()), (unsigned)getSize());
+
 	switch (getSubGroup())
 	{
 	case WP5_TOP_BOX_GROUP_FIGURE:
-		m_boxNumber = readU16(input, encryption);
+	{
+		m_boxNumber       = readU16(input, encryption);
 		m_positionAndType = readU8(input, encryption);
-		m_alignment = readU8(input, encryption);
-		m_width = readU16(input, encryption);
-		m_height = readU16(input, encryption);
-		m_x = readU16(input, encryption);
-		m_y = readU16(input, encryption);
+		m_alignment       = readU8(input, encryption);
+		m_width           = readU16(input, encryption);
+		m_height          = readU16(input, encryption);
+		m_x               = readU16(input, encryption);
+		m_y               = readU16(input, encryption);
+
 		input->seek(36, librevenge::RVNG_SEEK_CUR);
 		m_boxType = readU8(input, encryption);
 		if (m_boxType == 0x80)
@@ -70,41 +112,137 @@ void WP5BoxGroup::_readContents(librevenge::RVNGInputStream *input, WPXEncryptio
 			m_graphicsOffset = readU16(input, encryption);
 		}
 		break;
+	}
+
 	case WP5_TOP_BOX_GROUP_TABLE:
+		// Not handled here
 		break;
+
 	case WP5_TOP_BOX_GROUP_TEXT_BOX:
+	{
+		m_boxNumber       = readU16(input, encryption);
+		m_positionAndType = readU8(input, encryption);
+		m_alignment       = readU8(input, encryption);
+		m_width           = readU16(input, encryption);
+		m_height          = readU16(input, encryption);
+		m_x               = readU16(input, encryption);
+		m_y               = readU16(input, encryption);
+
+		int remainingSize = static_cast<int>(getSize()) - 12;
+		if (remainingSize < 0) remainingSize = 0;
+
+		WPD_DEBUG_MSG(("WP5BoxGroup(TEXT_BOX): remaining content = %d\n", remainingSize));
+
+		if (remainingSize > 0)
 		{
-			// Read basic box properties similar to figure boxes
-			m_boxNumber = readU16(input, encryption);
-			m_positionAndType = readU8(input, encryption);
-			m_alignment = readU8(input, encryption);
-			m_width = readU16(input, encryption);
-			m_height = readU16(input, encryption);
-			m_x = readU16(input, encryption);
-			m_y = readU16(input, encryption);
-			
-			// Calculate remaining content size for text data
-			// Size includes header overhead, subtract what we've read so far
-			// getSize() - 4 is the content size (minus group header)
-			// We've read: subgroup(1) + size(2) + boxNumber(2) + positionAndType(1) + alignment(1) + width(2) + height(2) + x(2) + y(2) = 15 bytes total from start
-			// But getSize() includes the full group size, so actual content read is 12 bytes after the standard 3-byte header
-			int remainingSize = getSize() - 4 - 12; // 4 for group overhead, 12 for what we read
-			
-			WPD_DEBUG_MSG(("WP5BoxGroup: Text box remaining size: %d\n", remainingSize));
-			
-			if (remainingSize > 0)
+			if (wp5LooksLikeVLHeader(input, encryption))
 			{
+				std::fprintf(stderr, "[WP5BoxGroup] TEXT_BOX: inline subdocument detected\n");
 				m_textSubDocument.reset(new WP5SubDocument(input, encryption, (unsigned)remainingSize));
+			}
+			else
+			{
+				// Packet-referenced path: read the payload, scan for first VL header, build subdocument from that offset
+				long payloadStart = (long)input->tell();
+				std::vector<unsigned char> buf;
+				buf.reserve(remainingSize);
+				for (int i = 0; i < remainingSize; ++i)
+					buf.push_back(readU8(input, encryption));
+
+				int off = -1;
+				for (int i = 0; i+3 < remainingSize; ++i)
+				{
+					unsigned char g  = buf[i];
+					unsigned char s2 = buf[i+1];
+					if (g >= 0xD0 && s2 < 0x80) { off = i; break; }
+				}
+				if (off < 0)
+				{
+					// Unknown payload layout: dump first up to 64 bytes for debugging
+					int dumpN = remainingSize < 64 ? remainingSize : 64;
+					std::fprintf(stderr, "[WP5BoxGroup] TEXT_BOX: no VL header; dumping first %d bytes:", dumpN);
+					for (int i = 0; i < dumpN; ++i) std::fprintf(stderr, " %02X", buf[i]);
+					std::fprintf(stderr, "\n");
+					off = 0; // fallback: treat entire payload as subdocument
+				}
+
+				// Rewind to discovered offset and create subdocument
+				input->seek(payloadStart + off, librevenge::RVNG_SEEK_SET);
+				unsigned payLen = (unsigned)((remainingSize > off) ? (remainingSize - off) : 0);
+				if (payLen > 0)
+				{
+					std::fprintf(stderr, "[WP5BoxGroup] TEXT_BOX: packet-referenced subdocument at +%d (len=%u)\n", off, payLen);
+					m_textSubDocument.reset(new WP5SubDocument(input, encryption, payLen));
+				}
+				// Move stream to end of group content
+				input->seek(payloadStart + remainingSize, librevenge::RVNG_SEEK_SET);
 			}
 		}
 		break;
+	}
+
 	case WP5_TOP_BOX_GROUP_USER_DEFINED_BOX:
+	{
+		m_boxNumber       = readU16(input, encryption);
+		m_positionAndType = readU8(input, encryption);
+		m_alignment       = readU8(input, encryption);
+		m_width           = readU16(input, encryption);
+		m_height          = readU16(input, encryption);
+		m_x               = readU16(input, encryption);
+		m_y               = readU16(input, encryption);
+
+		int remainingSize = static_cast<int>(getSize()) - 12;
+		if (remainingSize < 0) remainingSize = 0;
+
+		WPD_DEBUG_MSG(("WP5BoxGroup(USER_DEFINED_BOX): remaining content = %d\n", remainingSize));
+
+		if (remainingSize > 0)
+		{
+			if (wp5LooksLikeVLHeader(input, encryption))
+			{
+				std::fprintf(stderr, "[WP5BoxGroup] USER_DEFINED_BOX: inline subdocument detected\n");
+				m_userDefinedSubDocument.reset(new WP5SubDocument(input, encryption, (unsigned)remainingSize));
+			}
+			else
+			{
+				long payloadStart = (long)input->tell();
+				std::vector<unsigned char> buf;
+				buf.reserve(remainingSize);
+				for (int i = 0; i < remainingSize; ++i)
+					buf.push_back(readU8(input, encryption));
+
+				int off = -1;
+				for (int i = 0; i+3 < remainingSize; ++i)
+				{
+					unsigned char g  = buf[i];
+					unsigned char s2 = buf[i+1];
+					if (g >= 0xD0 && s2 < 0x80) { off = i; break; }
+				}
+				if (off < 0)
+				{
+					int dumpN = remainingSize < 64 ? remainingSize : 64;
+					std::fprintf(stderr, "[WP5BoxGroup] USER_DEFINED_BOX: no VL header; dumping first %d bytes:", dumpN);
+					for (int i = 0; i < dumpN; ++i) std::fprintf(stderr, " %02X", buf[i]);
+					std::fprintf(stderr, "\n");
+					off = 0;
+				}
+
+				input->seek(payloadStart + off, librevenge::RVNG_SEEK_SET);
+				unsigned payLen = (unsigned)((remainingSize > off) ? (remainingSize - off) : 0);
+				if (payLen > 0)
+				{
+					std::fprintf(stderr, "[WP5BoxGroup] USER_DEFINED_BOX: packet-referenced subdocument at +%d (len=%u)\n", off, payLen);
+					m_userDefinedSubDocument.reset(new WP5SubDocument(input, encryption, payLen));
+				}
+				input->seek(payloadStart + remainingSize, librevenge::RVNG_SEEK_SET);
+			}
+		}
+		break;
+	}
+
 	case WP5_TOP_BOX_GROUP_EQUATION:
-		break;
 	case WP5_TOP_BOX_GROUP_HORIZONTAL_LINE:
-		break;
 	case WP5_TOP_BOX_GROUP_VERTICAL_LINE:
-		break;
 	default:
 		break;
 	}
@@ -117,10 +255,14 @@ void WP5BoxGroup::parse(WP5Listener *listener)
 	switch (getSubGroup())
 	{
 	case WP5_TOP_BOX_GROUP_FIGURE:
+	{
 		if (m_boxType != 0x80)
 			break;
+
 		if (listener->getGeneralPacketData(8))
-			m_data = static_cast<const WP5GraphicsInformationPacket *>(listener->getGeneralPacketData(8))->getImage(m_graphicsOffset);
+			m_data = static_cast<const WP5GraphicsInformationPacket *>(
+			             listener->getGeneralPacketData(8))->getImage(m_graphicsOffset);
+
 		if (m_data)
 		{
 			listener->boxOn(m_positionAndType, m_alignment, m_width, m_height, m_x, m_y);
@@ -128,30 +270,47 @@ void WP5BoxGroup::parse(WP5Listener *listener)
 			listener->boxOff();
 		}
 		break;
+	}
 
-	case WP5_TOP_BOX_GROUP_TABLE:
-		break;
 	case WP5_TOP_BOX_GROUP_TEXT_BOX:
-		// Extract and parse text content from box data
+	{
+		listener->boxOn(m_positionAndType, m_alignment, m_width, m_height, m_x, m_y);
+
 		if (m_textSubDocument)
 		{
-			listener->boxOn(m_positionAndType, m_alignment, m_width, m_height, m_x, m_y);
-			
-			// Parse the subdocument content, which will insert the text
 			m_textSubDocument->parse(listener);
-			
-			listener->boxOff();
 		}
+		else
+		{
+			std::fprintf(stderr, "[WP5BoxGroup] TEXT_BOX: no subdocument to parse\n");
+		}
+
+		listener->boxOff();
 		break;
+	}
+
 	case WP5_TOP_BOX_GROUP_USER_DEFINED_BOX:
+	{
+		listener->boxOn(m_positionAndType, m_alignment, m_width, m_height, m_x, m_y);
+
+		if (m_userDefinedSubDocument)
+		{
+			m_userDefinedSubDocument->parse(listener);
+		}
+		else
+		{
+			std::fprintf(stderr, "[WP5BoxGroup] USER_DEFINED_BOX: no subdocument to parse\n");
+		}
+
+		listener->boxOff();
+		break;
+	}
+
+	case WP5_TOP_BOX_GROUP_TABLE:
 	case WP5_TOP_BOX_GROUP_EQUATION:
-		break;
 	case WP5_TOP_BOX_GROUP_HORIZONTAL_LINE:
-		break;
 	case WP5_TOP_BOX_GROUP_VERTICAL_LINE:
-		break;
 	default:
 		break;
 	}
 }
-/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
