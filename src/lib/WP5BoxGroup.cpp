@@ -101,7 +101,13 @@ void WP5BoxGroup::parse(WP5Listener *listener)
 		break;
 
 	case WP5_TOP_BOX_GROUP_TABLE:
+		break;
 	case WP5_TOP_BOX_GROUP_TEXT_BOX:
+		// Handle text boxes for packet text extraction
+		listener->boxOn(m_positionAndType, m_alignment, m_width, m_height, m_x, m_y);
+		// TODO: Extract and parse text content from box data
+		listener->boxOff();
+		break;
 	case WP5_TOP_BOX_GROUP_USER_DEFINED_BOX:
 	case WP5_TOP_BOX_GROUP_EQUATION:
 		break;

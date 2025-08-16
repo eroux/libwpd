@@ -29,6 +29,8 @@
 #include <librevenge-stream/librevenge-stream.h>
 #include <librevenge-generators/librevenge-generators.h>
 #include <libwpd/libwpd.h>
+#include <sstream>
+#include <vector>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -54,6 +56,12 @@ int printUsage()
 	printf("\t--help                show this help message\n");
 	printf("\t--password PASSWORD   try to decrypt password protected document\n");
 	printf("\t--version             print version and exit\n");
+	printf("\t--follow-packets      follow box/figure text packets (default: on)\n");
+	printf("\t--no-follow-packets   don't follow box/figure text packets\n");
+	printf("\t--legacy-font-map=PATH\n");
+	printf("\t                      load legacy font mapping from JSON file\n");
+	printf("\t--legacy-font-name=NAMES\n");
+	printf("\t                      comma-separated allowlist of font names for mapping\n");
 	printf("\n");
 	printf("Report bugs to <https://sourceforge.net/p/libwpd/tickets/> or <https://bugs.documentfoundation.org/>.\n");
 	return -1;
@@ -67,6 +75,23 @@ int printVersion()
 
 } // anonymous namespace
 
+// Helper function to split comma-separated font names
+std::vector<std::string> splitFontNames(const std::string &names)
+{
+	std::vector<std::string> result;
+	std::stringstream ss(names);
+	std::string item;
+	while (std::getline(ss, item, ','))
+	{
+		// Trim whitespace
+		item.erase(0, item.find_first_not_of(" \t"));
+		item.erase(item.find_last_not_of(" \t") + 1);
+		if (!item.empty())
+			result.push_back(item);
+	}
+	return result;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -76,6 +101,9 @@ int main(int argc, char *argv[])
 	char *szInputFile = nullptr;
 	bool isInfo = false;
 	char *password = nullptr;
+	bool followPackets = true;
+	std::string legacyFontMapPath;
+	std::vector<std::string> legacyFontNames;
 
 	for (int i = 1; i < argc; i++)
 	{
@@ -90,6 +118,14 @@ int main(int argc, char *argv[])
 			isInfo = true;
 		else if (!strcmp(argv[i], "--version"))
 			return printVersion();
+		else if (!strcmp(argv[i], "--follow-packets"))
+			followPackets = true;
+		else if (!strcmp(argv[i], "--no-follow-packets"))
+			followPackets = false;
+		else if (!strncmp(argv[i], "--legacy-font-map=", 18))
+			legacyFontMapPath = &argv[i][18];
+		else if (!strncmp(argv[i], "--legacy-font-name=", 19))
+			legacyFontNames = splitFontNames(&argv[i][19]);
 		else if (!szInputFile && strncmp(argv[i], "--", 2))
 			szInputFile = argv[i];
 		else

@@ -39,3 +39,29 @@
 
 # debug information files
 *.dwo
+
+# Build system generated files
+build-stamp
+config.log
+config.status
+Makefile
+Makefile.in
+aclocal.m4
+ar-lib
+autom4te.cache/
+compile
+config.guess
+config.h
+config.h.in
+configure
+depcomp
+install-sh
+libtool
+*.pc
+ltmain.sh
+missing
+stamp-h1
+inc/Makefile
+inc/Makefile.in
+inc/libwpd/Makefile
+inc/libwpd/Makefile.in

@@ -1725,16 +1725,24 @@ void WP6ContentListener::insertGraphicsData(const unsigned short packetId)
 
 void WP6ContentListener::insertTextBox(const WP6SubDocument *subDocument)
 {
-	if (!isUndoOn() && subDocument && m_parseState->m_isFrameOpened)
+	if (!isUndoOn() && subDocument)
 	{
-		librevenge::RVNGPropertyList propList;
-		m_documentInterface->openTextBox(propList);
+		if (m_parseState->m_isFrameOpened)
+		{
+			librevenge::RVNGPropertyList propList;
+			m_documentInterface->openTextBox(propList);
 
-		// Positioned objects like text boxes are special beasts. They can contain all hierarchical elements up
-		// to the level of sections. They cannot open or close a page span though.
-		handleSubDocument(subDocument, WPX_SUBDOCUMENT_TEXT_BOX, m_parseState->m_tableList, m_parseState->m_nextTableIndice);
+			// Positioned objects like text boxes are special beasts. They can contain all hierarchical elements up
+			// to the level of sections. They cannot open or close a page span though.
+			handleSubDocument(subDocument, WPX_SUBDOCUMENT_TEXT_BOX, m_parseState->m_tableList, m_parseState->m_nextTableIndice);
 
-		m_documentInterface->closeTextBox();
+			m_documentInterface->closeTextBox();
+		}
+		else
+		{
+			// For packet text extraction: parse text content directly without formal text box structure
+			handleSubDocument(subDocument, WPX_SUBDOCUMENT_TEXT_BOX, m_parseState->m_tableList, m_parseState->m_nextTableIndice);
+		}
 	}
 }
 

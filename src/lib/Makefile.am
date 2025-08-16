@@ -188,6 +188,7 @@ libwpd_@WPD_MAJOR_VERSION@_@WPD_MINOR_VERSION@_la_SOURCES = \
 	WPXEncryption.cpp \
 	WPXHeader.cpp \
 	WPXHeaderFooter.cpp \
+	WPXLegacyFontMap.cpp \
 	WPXListener.cpp \
 	WPXMemoryStream.cpp \
 	WPXPageSpan.cpp \
@@ -354,11 +355,13 @@ libwpd_@WPD_MAJOR_VERSION@_@WPD_MINOR_VERSION@_la_SOURCES = \
 	WP6UnsupportedFixedLengthGroup.h \
 	WP6UnsupportedVariableLengthGroup.h \
 	WP6VariableLengthGroup.h \
+	WPDExtractionOptions.h \
 	WPXContentListener.h \
 	WPXEncryption.h \
 	WPXHeader.h \
 	WPXHeaderFooter.h \
 	WPXFileStructure.h \
+	WPXLegacyFontMap.h \
 	WPXListener.h \
 	WPXMemoryStream.h \
 	WPXPageSpan.h \

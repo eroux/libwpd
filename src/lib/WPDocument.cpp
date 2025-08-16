@@ -26,6 +26,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <cstdio>
 
 #include <librevenge/librevenge.h>
 #include "WPXHeader.h"
@@ -259,6 +260,7 @@ WPDAPI WPDResult WPDocument::parse(librevenge::RVNGInputStream *input, libreveng
 			case 0x00: // WP5
 			{
 				WPD_DEBUG_MSG(("WordPerfect: Using the WP5 parser.\n"));
+				fprintf(stderr, "DEBUG: Using WP5 parser for file\n");
 				if (password)
 					encryption.reset(new WPXEncryption(password, 16));
 				parser.reset(new WP5Parser(document.get(), header.get(), encryption.get()));
@@ -286,6 +288,7 @@ WPDAPI WPDResult WPDocument::parse(librevenge::RVNGInputStream *input, libreveng
 			case 0x04: // WP Mac 3.5e
 			{
 				WPD_DEBUG_MSG(("WordPerfect: Using the WP3 parser.\n"));
+				fprintf(stderr, "DEBUG: Using WP3 parser for Mac file\n");
 				if (password)
 					encryption.reset(new WPXEncryption(password, header->getDocumentOffset()));
 				parser.reset(new WP3Parser(document.get(), header.get(), encryption.get()));
