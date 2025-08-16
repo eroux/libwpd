@@ -30,6 +30,7 @@
 #include "WP5PrefixData.h"
 #include "WP5Listener.h"
 #include "WP5GraphicsInformationPacket.h"
+#include "WPXContentListener.h"
 
 WP5BoxGroup::WP5BoxGroup(librevenge::RVNGInputStream *input, WPXEncryption *encryption) :
 	WP5VariableLengthGroup(),
@@ -104,9 +105,19 @@ void WP5BoxGroup::parse(WP5Listener *listener)
 		break;
 	case WP5_TOP_BOX_GROUP_TEXT_BOX:
 		// Handle text boxes for packet text extraction
-		listener->boxOn(m_positionAndType, m_alignment, m_width, m_height, m_x, m_y);
-		// TODO: Extract and parse text content from box data
-		listener->boxOff();
+		// Check if followPackets is enabled in extraction options
+		{
+			bool shouldFollowPackets = true; // default to true for backward compatibility
+			if (WPXContentListener::s_extractionOptions)
+				shouldFollowPackets = WPXContentListener::s_extractionOptions->followPackets;
+				
+			if (shouldFollowPackets)
+			{
+				listener->boxOn(m_positionAndType, m_alignment, m_width, m_height, m_x, m_y);
+				// TODO: Extract and parse text content from box data when available
+				listener->boxOff();
+			}
+		}
 		break;
 	case WP5_TOP_BOX_GROUP_USER_DEFINED_BOX:
 	case WP5_TOP_BOX_GROUP_EQUATION:

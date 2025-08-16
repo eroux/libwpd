@@ -63,6 +63,7 @@ public:
 	static WPDAPI WPDConfidence isFileFormatSupported(librevenge::RVNGInputStream *input);
 	static WPDAPI WPDPasswordMatch verifyPassword(librevenge::RVNGInputStream *input, const char *password);
 	static WPDAPI WPDResult parse(librevenge::RVNGInputStream *input, librevenge::RVNGTextInterface *documentInterface, const char *password);
+	static WPDAPI WPDResult parse(librevenge::RVNGInputStream *input, librevenge::RVNGTextInterface *documentInterface, const char *password, bool followPackets, const char *legacyFontMapFile = nullptr, const char *allowedFontNames = nullptr);
 	static WPDAPI WPDResult parseSubDocument(librevenge::RVNGInputStream *input, librevenge::RVNGTextInterface *documentInterface, WPDFileFormat fileFormat);
 };
 

@@ -160,12 +160,23 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	// TODO: Set up extraction options for legacy font mapping
-	// (Currently disabled due to linking issues)
+	// Set up extraction options for legacy font mapping and followPackets
+	const char *legacyFontMapFilePtr = legacyFontMapPath.empty() ? nullptr : legacyFontMapPath.c_str();
+	
+	std::string allowedFontNamesStr;
+	if (!legacyFontNames.empty())
+	{
+		for (size_t i = 0; i < legacyFontNames.size(); ++i)
+		{
+			if (i > 0) allowedFontNamesStr += ",";
+			allowedFontNamesStr += legacyFontNames[i];
+		}
+	}
+	const char *allowedFontNamesPtr = allowedFontNamesStr.empty() ? nullptr : allowedFontNamesStr.c_str();
 	
 	librevenge::RVNGString document;
 	librevenge::RVNGTextTextGenerator documentGenerator(document, isInfo);
-	WPDResult error = WPDocument::parse(&input, &documentGenerator, password);
+	WPDResult error = WPDocument::parse(&input, &documentGenerator, password, followPackets, legacyFontMapFilePtr, allowedFontNamesPtr);
 
 	if (error == WPD_FILE_ACCESS_ERROR)
 		fprintf(stderr, "ERROR: File Exception!\n");
@@ -182,8 +193,6 @@ int main(int argc, char *argv[])
 		return 1;
 
 	printf("%s", document.cstr());
-	
-	// TODO: Clean up extraction options when implemented
 
 	return 0;
 }

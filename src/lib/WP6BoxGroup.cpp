@@ -33,6 +33,7 @@
 #include "WP6GeneralTextPacket.h"
 #include "WP6GraphicsBoxStylePacket.h"
 #include "WP6HyperlinkPacket.h"
+#include "WPXContentListener.h"
 
 WP6BoxGroup::WP6BoxGroup(librevenge::RVNGInputStream *input, WPXEncryption *encryption) :
 	WP6VariableLengthGroup(),
@@ -411,7 +412,13 @@ void WP6BoxGroup::parse(WP6Listener *listener)
 	}
 	if ((tmpContentType == 0x01) && (subDocument))
 	{
-		listener->insertTextBox(subDocument.get());
+		// Check if followPackets is enabled in extraction options
+		bool shouldFollowPackets = true; // default to true for backward compatibility
+		if (WPXContentListener::s_extractionOptions)
+			shouldFollowPackets = WPXContentListener::s_extractionOptions->followPackets;
+			
+		if (shouldFollowPackets)
+			listener->insertTextBox(subDocument.get());
 	}
 
 	// End the box
