@@ -39,3 +39,19 @@
 
 # debug information files
 *.dwo
+
+# Build system generated files
+Makefile.in
+aclocal.m4
+ar-lib
+autom4te.cache/
+compile
+config.guess
+config.h.in
+config.log
+config.sub
+configure
+depcomp
+install-sh
+ltmain.sh
+missing
