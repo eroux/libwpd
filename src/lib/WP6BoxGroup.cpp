@@ -33,6 +33,7 @@
 #include "WP6GeneralTextPacket.h"
 #include "WP6GraphicsBoxStylePacket.h"
 #include "WP6HyperlinkPacket.h"
+#include "WPXContentListener.h"
 
 WP6BoxGroup::WP6BoxGroup(librevenge::RVNGInputStream *input, WPXEncryption *encryption) :
 	WP6VariableLengthGroup(),
@@ -411,6 +412,7 @@ void WP6BoxGroup::parse(WP6Listener *listener)
 	}
 	if ((tmpContentType == 0x01) && (subDocument))
 	{
+		// Always follow packets for text content extraction (simplified approach)
 		listener->insertTextBox(subDocument.get());
 	}
 

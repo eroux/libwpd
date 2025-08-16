@@ -25,8 +25,12 @@
 
 #include "WPXContentListener.h"
 #include "WPXPageSpan.h"
+#include "WPXLegacyFontMap.h"
 #include "libwpd_internal.h"
 #include <limits>
+
+// Static extraction options for font mapping
+const WPDExtractionOptions *WPXContentListener::s_extractionOptions = nullptr;
 
 WPXContentParsingState::WPXContentParsingState() :
 	m_textAttributeBits(0),
@@ -624,6 +628,21 @@ void WPXContentListener::_insertText(const librevenge::RVNGString &textBuffer)
 {
 	if (textBuffer.len() <= 0)
 		return;
+
+	// Debug: Log what's in the text buffer
+	static int textCallCount = 0;
+	if (textCallCount < 5)
+	{
+		printf("DEBUG: _insertText call %d, buffer length=%d, first 50 chars:\n", 
+		       textCallCount, (int)textBuffer.len());
+		const char *str = textBuffer.cstr();
+		for (int i = 0; i < std::min(50, (int)textBuffer.len()); i++)
+		{
+			printf("  [%d]: 0x%02X ('%c')\n", i, (unsigned char)str[i], 
+			       isprint(str[i]) ? str[i] : '?');
+		}
+		textCallCount++;
+	}
 
 	librevenge::RVNGString tmpText;
 	const char ASCII_SPACE = 0x0020;
@@ -1447,6 +1466,45 @@ double WPXContentListener::_movePositionToFirstColumn(double position)
 
 unsigned WPXContentListener::_mapNonUnicodeCharacter(unsigned character)
 {
+	// First check legacy font mapping if enabled
+	if (s_extractionOptions && s_extractionOptions->legacyFontMap && m_ps->m_fontName)
+	{
+		std::string currentFont = m_ps->m_fontName->cstr();
+		
+		// Check if current font is in the allowed list (case-insensitive)
+		for (const auto &allowedFont : s_extractionOptions->allowedFontNames)
+		{
+			if (std::equal(currentFont.begin(), currentFont.end(),
+			              allowedFont.begin(), allowedFont.end(),
+			              [](char a, char b) { return std::tolower(a) == std::tolower(b); }))
+			{
+				std::string mapped = s_extractionOptions->legacyFontMap->mapCharacter(allowedFont, (unsigned char)character);
+				if (!mapped.empty())
+				{
+					// Convert UTF-8 string to UCS4 character
+					// For simplicity, assume single UTF-8 character for now
+					// TODO: Handle multi-byte UTF-8 sequences properly
+					if (mapped.length() >= 3 && (unsigned char)mapped[0] == 0xE0) // Tibetan range
+					{
+						// Extract Tibetan character from UTF-8 encoding
+						unsigned char byte1 = (unsigned char)mapped[0];
+						unsigned char byte2 = (unsigned char)mapped[1]; 
+						unsigned char byte3 = (unsigned char)mapped[2];
+						
+						if ((byte1 & 0xF0) == 0xE0 && (byte2 & 0xC0) == 0x80 && (byte3 & 0xC0) == 0x80)
+						{
+							// Convert UTF-8 to UCS4
+							unsigned result = ((byte1 & 0x0F) << 12) | ((byte2 & 0x3F) << 6) | (byte3 & 0x3F);
+							return result;
+						}
+					}
+				}
+				break; // Found the font in allowed list, no need to check others
+			}
+		}
+	}
+	
+	// Fall back to existing font mapping
 	if (*(m_ps->m_fontName) == "Symbol")
 		return _mapSymbolFontCharacter(character);
 
@@ -1562,5 +1620,10 @@ unsigned WPXContentListener::_mapDingbatsFontCharacter(unsigned character)
 		return _dingbatsFontMap4[character - 0xF1];
 	}
 	return character;
+}
+
+void WPXContentListener::setExtractionOptions(const WPDExtractionOptions *options)
+{
+	s_extractionOptions = options;
 }
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

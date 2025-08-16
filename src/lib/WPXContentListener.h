@@ -32,6 +32,7 @@
 #include "WPXSubDocument.h"
 #include "WPXPageSpan.h"
 #include "WPXListener.h"
+#include "WPDExtractionOptions.h"
 #include <memory>
 #include <vector>
 #include <list>
@@ -208,6 +209,10 @@ protected:
 	void _insertPageNumberParagraph(WPXPageNumberPosition position, WPXNumberingType type, librevenge::RVNGString fontName, double fontSize);
 
 	unsigned _mapNonUnicodeCharacter(unsigned character);
+	
+public:
+	// Static method to set extraction options for font mapping
+	static void setExtractionOptions(const WPDExtractionOptions *options);
 
 private:
 	WPXContentListener(const WPXContentListener &);
@@ -216,6 +221,9 @@ private:
 	static librevenge::RVNGString _mergeColorsToString(const RGBSColor *fgColor, const RGBSColor *bgColor);
 	static unsigned _mapSymbolFontCharacter(unsigned character);
 	static unsigned _mapDingbatsFontCharacter(unsigned character);
+	
+	// Global extraction options for font mapping (temporary solution)
+	static const WPDExtractionOptions *s_extractionOptions;
 };
 
 #endif /* WPXCONTENTLISTENER_H */
