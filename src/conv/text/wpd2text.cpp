@@ -120,6 +120,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	// Removed unused local 'followPackets'; rely on WPDExtractionOptions.followPackets default (true).
+
 	librevenge::RVNGString document;
 	librevenge::RVNGTextTextGenerator documentGenerator(document, isInfo);
 	WPDResult error = WPDocument::parse(&input, &documentGenerator, password);
