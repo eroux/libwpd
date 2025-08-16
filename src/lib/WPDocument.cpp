@@ -39,9 +39,32 @@
 #include "WP5Parser.h"
 #include "WP6Parser.h"
 #include "WPXEncryption.h"
+#include "WPDExtractionOptions.h"
+#include "WPXLegacyFontMap.h"
+#include "WPXContentListener.h"
 #include "libwpd_internal.h"
+#include <sstream>
 
 using namespace libwpd;
+
+// Helper function to split comma-separated font names
+namespace {
+std::vector<std::string> splitFontNames(const std::string &names)
+{
+	std::vector<std::string> result;
+	std::stringstream ss(names);
+	std::string item;
+	while (std::getline(ss, item, ','))
+	{
+		// Trim whitespace
+		item.erase(0, item.find_first_not_of(" \t"));
+		item.erase(item.find_last_not_of(" \t") + 1);
+		if (!item.empty())
+			result.push_back(item);
+	}
+	return result;
+}
+}
 
 /**
 \mainpage libwpd documentation
@@ -208,6 +231,81 @@ catch (...)
 {
 	WPD_DEBUG_MSG(("Unknown Exception trapped\n"));
 	return WPD_PASSWORD_MATCH_NONE;
+}
+
+/**
+Parses the input stream content with extraction options. It will make callbacks to the functions provided by a
+librevenge::RVNGTextInterface class implementation when needed. This is often commonly called the
+'main parsing routine'.
+\param input The input stream
+\param textInterface A librevenge::RVNGTextInterface implementation
+\param password The password used to protect the document or NULL if the document
+is not protected
+\param followPackets Whether to follow box/figure text packets during parsing
+\param legacyFontMapFile Path to JSON file containing legacy font character mappings
+\param allowedFontNames Comma-separated list of font names to apply legacy mapping to
+\return A value that indicates whether the conversion was successful and in case it
+was not, it indicates the reason of the error
+*/
+WPDAPI WPDResult WPDocument::parse(librevenge::RVNGInputStream *input, librevenge::RVNGTextInterface *textInterface, const char *password, bool followPackets, const char *legacyFontMapFile, const char *allowedFontNames) try
+{
+	// Create extraction options
+	std::unique_ptr<WPDExtractionOptions> extractionOptions(new WPDExtractionOptions());
+	extractionOptions->followPackets = followPackets;
+	
+	// Set up legacy font mapping if provided
+	if (legacyFontMapFile && *legacyFontMapFile)
+	{
+		extractionOptions->legacyFontMap = std::make_shared<WPXLegacyFontMap>();
+		if (!extractionOptions->legacyFontMap->loadFromFile(legacyFontMapFile))
+		{
+			WPD_DEBUG_MSG(("Failed to load legacy font map from: %s\n", legacyFontMapFile));
+			// Continue parsing without font mapping
+			extractionOptions->legacyFontMap.reset();
+		}
+	}
+	
+	// Set up allowed font names if provided
+	if (allowedFontNames && *allowedFontNames)
+	{
+		std::vector<std::string> fontNames = splitFontNames(allowedFontNames);
+		extractionOptions->allowedFontNames.insert(fontNames.begin(), fontNames.end());
+	}
+	
+	// Set the extraction options globally for this parse session
+	WPXContentListener::setExtractionOptions(extractionOptions.get());
+	
+	// Call the original parse method
+	WPDResult result = parse(input, textInterface, password);
+	
+	// Clean up extraction options
+	WPXContentListener::setExtractionOptions(nullptr);
+	
+	return result;
+}
+catch (FileException)
+{
+	WPD_DEBUG_MSG(("File Exception trapped\n"));
+	WPXContentListener::setExtractionOptions(nullptr);
+	return WPD_FILE_ACCESS_ERROR;
+}
+catch (ParseException)
+{
+	WPD_DEBUG_MSG(("Parse Exception trapped\n"));
+	WPXContentListener::setExtractionOptions(nullptr);
+	return WPD_PARSE_ERROR;
+}
+catch (UnsupportedEncryptionException)
+{
+	WPD_DEBUG_MSG(("Encrypted document exception trapped\n"));
+	WPXContentListener::setExtractionOptions(nullptr);
+	return WPD_UNSUPPORTED_ENCRYPTION_ERROR;
+}
+catch (...)
+{
+	WPD_DEBUG_MSG(("Unknown Exception trapped\n"));
+	WPXContentListener::setExtractionOptions(nullptr);
+	return WPD_UNKNOWN_ERROR;
 }
 
 /**
