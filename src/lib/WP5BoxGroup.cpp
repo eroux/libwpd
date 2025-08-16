@@ -30,6 +30,7 @@
 #include "WP5PrefixData.h"
 #include "WP5Listener.h"
 #include "WP5GraphicsInformationPacket.h"
+#include "WP5SubDocument.h"
 #include "WPXContentListener.h"
 
 WP5BoxGroup::WP5BoxGroup(librevenge::RVNGInputStream *input, WPXEncryption *encryption) :
@@ -43,7 +44,8 @@ WP5BoxGroup::WP5BoxGroup(librevenge::RVNGInputStream *input, WPXEncryption *encr
 	m_y(0),
 	m_boxType(0),
 	m_graphicsOffset(0),
-	m_data(nullptr)
+	m_data(nullptr),
+	m_textSubDocument()
 {
 	_read(input, encryption);
 }
@@ -69,7 +71,33 @@ void WP5BoxGroup::_readContents(librevenge::RVNGInputStream *input, WPXEncryptio
 		}
 		break;
 	case WP5_TOP_BOX_GROUP_TABLE:
+		break;
 	case WP5_TOP_BOX_GROUP_TEXT_BOX:
+		{
+			// Read basic box properties similar to figure boxes
+			m_boxNumber = readU16(input, encryption);
+			m_positionAndType = readU8(input, encryption);
+			m_alignment = readU8(input, encryption);
+			m_width = readU16(input, encryption);
+			m_height = readU16(input, encryption);
+			m_x = readU16(input, encryption);
+			m_y = readU16(input, encryption);
+			
+			// Calculate remaining content size for text data
+			// Size includes header overhead, subtract what we've read so far
+			// getSize() - 4 is the content size (minus group header)
+			// We've read: subgroup(1) + size(2) + boxNumber(2) + positionAndType(1) + alignment(1) + width(2) + height(2) + x(2) + y(2) = 15 bytes total from start
+			// But getSize() includes the full group size, so actual content read is 12 bytes after the standard 3-byte header
+			int remainingSize = getSize() - 4 - 12; // 4 for group overhead, 12 for what we read
+			
+			WPD_DEBUG_MSG(("WP5BoxGroup: Text box remaining size: %d\n", remainingSize));
+			
+			if (remainingSize > 0)
+			{
+				m_textSubDocument.reset(new WP5SubDocument(input, encryption, (unsigned)remainingSize));
+			}
+		}
+		break;
 	case WP5_TOP_BOX_GROUP_USER_DEFINED_BOX:
 	case WP5_TOP_BOX_GROUP_EQUATION:
 		break;
@@ -104,7 +132,16 @@ void WP5BoxGroup::parse(WP5Listener *listener)
 	case WP5_TOP_BOX_GROUP_TABLE:
 		break;
 	case WP5_TOP_BOX_GROUP_TEXT_BOX:
-		// TODO: Extract and parse text content from box data
+		// Extract and parse text content from box data
+		if (m_textSubDocument)
+		{
+			listener->boxOn(m_positionAndType, m_alignment, m_width, m_height, m_x, m_y);
+			
+			// Parse the subdocument content, which will insert the text
+			m_textSubDocument->parse(listener);
+			
+			listener->boxOff();
+		}
 		break;
 	case WP5_TOP_BOX_GROUP_USER_DEFINED_BOX:
 	case WP5_TOP_BOX_GROUP_EQUATION:

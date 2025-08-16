@@ -28,6 +28,9 @@
 
 #include "WP5VariableLengthGroup.h"
 #include <libwpd/libwpd.h>
+#include <memory>
+
+class WP5SubDocument;
 
 class WP5BoxGroup : public WP5VariableLengthGroup
 {
@@ -45,6 +48,7 @@ private:
 	unsigned char m_boxType;
 	unsigned short m_graphicsOffset;
 	const librevenge::RVNGBinaryData *m_data;
+	std::shared_ptr<WP5SubDocument> m_textSubDocument;
 	// Unimplemented to prevent compiler from creating crasher ones
 	WP5BoxGroup(const WP5BoxGroup &);
 	WP5BoxGroup &operator=(const WP5BoxGroup &);

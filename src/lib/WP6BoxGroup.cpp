@@ -412,13 +412,8 @@ void WP6BoxGroup::parse(WP6Listener *listener)
 	}
 	if ((tmpContentType == 0x01) && (subDocument))
 	{
-		// Check if followPackets is enabled in extraction options
-		bool shouldFollowPackets = true; // default to true for backward compatibility
-		if (WPXContentListener::s_extractionOptions)
-			shouldFollowPackets = WPXContentListener::s_extractionOptions->followPackets;
-			
-		if (shouldFollowPackets)
-			listener->insertTextBox(subDocument.get());
+		// Always follow packets for text content extraction (simplified approach)
+		listener->insertTextBox(subDocument.get());
 	}
 
 	// End the box
