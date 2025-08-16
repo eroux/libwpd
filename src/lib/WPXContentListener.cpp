@@ -629,6 +629,21 @@ void WPXContentListener::_insertText(const librevenge::RVNGString &textBuffer)
 	if (textBuffer.len() <= 0)
 		return;
 
+	// Debug: Log what's in the text buffer
+	static int textCallCount = 0;
+	if (textCallCount < 5)
+	{
+		printf("DEBUG: _insertText call %d, buffer length=%d, first 50 chars:\n", 
+		       textCallCount, (int)textBuffer.len());
+		const char *str = textBuffer.cstr();
+		for (int i = 0; i < std::min(50, (int)textBuffer.len()); i++)
+		{
+			printf("  [%d]: 0x%02X ('%c')\n", i, (unsigned char)str[i], 
+			       isprint(str[i]) ? str[i] : '?');
+		}
+		textCallCount++;
+	}
+
 	librevenge::RVNGString tmpText;
 	const char ASCII_SPACE = 0x0020;
 
