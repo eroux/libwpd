@@ -104,20 +104,7 @@ void WP5BoxGroup::parse(WP5Listener *listener)
 	case WP5_TOP_BOX_GROUP_TABLE:
 		break;
 	case WP5_TOP_BOX_GROUP_TEXT_BOX:
-		// Handle text boxes for packet text extraction
-		// Check if followPackets is enabled in extraction options
-		{
-			bool shouldFollowPackets = true; // default to true for backward compatibility
-			if (WPXContentListener::s_extractionOptions)
-				shouldFollowPackets = WPXContentListener::s_extractionOptions->followPackets;
-				
-			if (shouldFollowPackets)
-			{
-				listener->boxOn(m_positionAndType, m_alignment, m_width, m_height, m_x, m_y);
-				// TODO: Extract and parse text content from box data when available
-				listener->boxOff();
-			}
-		}
+		// TODO: Extract and parse text content from box data
 		break;
 	case WP5_TOP_BOX_GROUP_USER_DEFINED_BOX:
 	case WP5_TOP_BOX_GROUP_EQUATION:
