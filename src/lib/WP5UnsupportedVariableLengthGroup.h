@@ -37,6 +37,8 @@ class WP5UnsupportedVariableLengthGroup : public WP5VariableLengthGroup
 public:
 	WP5UnsupportedVariableLengthGroup(librevenge::RVNGInputStream *input, WPXEncryption *encryption);
 	void parse(WP5Listener * /* listener */) override {}
+protected:
+	void _readContents(librevenge::RVNGInputStream *input, WPXEncryption *encryption) override;
 };
 
 #endif /* WP5UNSUPPORTEDVARIABLELENGTHGROUP_H */
