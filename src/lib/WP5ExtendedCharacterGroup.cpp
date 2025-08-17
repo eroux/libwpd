@@ -47,10 +47,14 @@ void WP5ExtendedCharacterGroup::_readContents(librevenge::RVNGInputStream *input
 
 void WP5ExtendedCharacterGroup::parse(WP5Listener *listener)
 {
-	const unsigned *chars;
-	int len = extendedCharacterWP5ToUCS4(m_character,
-	                                     m_characterSet, &chars);
-	for (int i = 0; i < len; i++)
-		listener->insertCharacter(chars[i]);
+	// Changed: output a hex dump of the original bytes instead of performing
+	// the extended WP5 -> UCS4 character conversion.
+	// Assumption: caller wants to see the two raw bytes (character, characterSet)
+	// rendered as uppercase hex pairs separated by a space, e.g. "AB CD".
+	static const char hexdigits[] = "0123456789ABCDEF";
+	listener->insertCharacter('h');
+	listener->insertCharacter('[');
+	listener->insertCharacter(hexdigits[(m_character >> 4) & 0xF]);
+	listener->insertCharacter(hexdigits[m_character & 0xF]);
+	listener->insertCharacter(']');
 }
-/* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */
