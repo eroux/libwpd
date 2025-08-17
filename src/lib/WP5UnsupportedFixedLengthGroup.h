@@ -36,7 +36,7 @@ public:
 	void parse(WP5Listener * /* listener */) override {}
 
 protected:
-	void _readContents(librevenge::RVNGInputStream * /* input */, WPXEncryption * /* encryption */) override {}
+	void _readContents(librevenge::RVNGInputStream *input, WPXEncryption *encryption) override;
 };
 
 #endif /* WP5UNSUPPORTEDFIXEDLENGTHGROUP_H */
