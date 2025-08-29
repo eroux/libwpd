@@ -11,7 +11,8 @@
 
 WPDHTMLTextGenerator::WPDHTMLTextGenerator(librevenge::RVNGString &document) :
     librevenge::RVNGHTMLTextGenerator(document),
-    m_isFirstPage(true)
+    m_isFirstPage(true),
+    m_documentRef(document)
 {
 }
 
@@ -21,10 +22,8 @@ WPDHTMLTextGenerator::~WPDHTMLTextGenerator()
 
 void WPDHTMLTextGenerator::insertLineBreak()
 {
-    // Insert custom line break tag instead of standard <br>
-    librevenge::RVNGString lineBreakTag;
-    lineBreakTag.append("<wp5-line-break></wp5-line-break>");
-    insertText(lineBreakTag);
+    // Insert custom line break tag directly into HTML as raw HTML
+    m_documentRef.append("<wp5-line-break></wp5-line-break>");
 }
 
 void WPDHTMLTextGenerator::openPageSpan(const librevenge::RVNGPropertyList &propList)
@@ -48,10 +47,8 @@ void WPDHTMLTextGenerator::closePageSpan()
 
 void WPDHTMLTextGenerator::insertCustomPageBreak()
 {
-    // Insert custom page break tag
-    librevenge::RVNGString pageBreakTag;
-    pageBreakTag.append("<wp5-page-break></wp5-page-break>");
-    insertText(pageBreakTag);
+    // Insert custom page break tag directly into HTML as raw HTML
+    m_documentRef.append("<wp5-page-break></wp5-page-break>");
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 noexpandtab: */

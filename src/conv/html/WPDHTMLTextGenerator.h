@@ -30,6 +30,7 @@ public:
 private:
     void insertCustomPageBreak();
     bool m_isFirstPage;
+    librevenge::RVNGString &m_documentRef;
 };
 
 #endif /* WPDHTMLTEXTGENERATOR_H */
