@@ -70,6 +70,7 @@ public:
 	{
 		WPXContentListener::insertBreak(breakType);
 	}
+	void handleLineBreak() override;
 	void lineSpacingChange(double lineSpacing) override
 	{
 		WPXContentListener::lineSpacingChange(lineSpacing);

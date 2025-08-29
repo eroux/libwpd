@@ -157,6 +157,7 @@ const unsigned char WPX_TABLE_CELL_BOTTOM_BORDER_OFF = 0x08;
 #define WPX_PAGE_BREAK 0x00
 #define WPX_SOFT_PAGE_BREAK 0x01
 #define WPX_COLUMN_BREAK 0x02
+#define WPX_LINE_BREAK 0x03
 
 // Generic bits
 #define WPX_LEFT 0x00

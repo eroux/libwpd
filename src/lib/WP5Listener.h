@@ -52,6 +52,7 @@ public:
 	virtual void insertIndent(unsigned char indentType, double indentPosition) = 0;
 	virtual void insertEOL() = 0;
 	virtual void insertBreak(unsigned char breakType) = 0;
+	virtual void handleLineBreak() = 0;
 	virtual void lineSpacingChange(double lineSpacing) = 0;
 	virtual void justificationChange(unsigned char justification) = 0;
 	virtual void characterColorChange(unsigned char red, unsigned char green, unsigned char blue) = 0;

@@ -235,6 +235,19 @@ void WP5ContentListener::insertEOL()
 	}
 }
 
+void WP5ContentListener::handleLineBreak()
+{
+	if (!isUndoOn())
+	{
+		if (!m_ps->m_isSpanOpened)
+			_openSpan();
+		else
+			_flushText();
+
+		m_documentInterface->insertLineBreak();
+	}
+}
+
 void WP5ContentListener::defineTable(unsigned char position, unsigned short leftOffset)
 {
 	if (!isUndoOn())

@@ -19,7 +19,9 @@ wpd2html_LDADD = \
 	@WPD2HTML_WIN32_RESOURCE@
 
 wpd2html_SOURCES = \
-	wpd2html.cpp
+	wpd2html.cpp \
+	WPDHTMLTextGenerator.cpp \
+	WPDHTMLTextGenerator.h
 
 if OS_WIN32
 
