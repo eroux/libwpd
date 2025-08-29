@@ -63,6 +63,10 @@ public:
 		/*if (!isUndoOn())*/ m_currentPageHasContent = true;
 	}
 	void insertBreak(unsigned char breakType) override;
+	void handleLineBreak() override
+	{
+		/*if (!isUndoOn())*/ m_currentPageHasContent = true;
+	}
 	void attributeChange(bool /* isOn */, unsigned char /* attribute */) override {}
 	void lineSpacingChange(double /* lineSpacing */) override {}
 	void justificationChange(unsigned char /* justification */) override {}

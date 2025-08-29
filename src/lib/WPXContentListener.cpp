@@ -1281,7 +1281,13 @@ void WPXContentListener::insertBreak(const unsigned char breakType)
 				_closeListElement();
 			m_ps->m_isParagraphPageBreak = true;
 			break;
-		// TODO: (.. line break?)
+		case WPX_LINE_BREAK:
+			if (!m_ps->m_isSpanOpened)
+				_openSpan();
+			else
+				_flushText();
+			m_documentInterface->insertLineBreak();
+			break;
 		default:
 			break;
 		}

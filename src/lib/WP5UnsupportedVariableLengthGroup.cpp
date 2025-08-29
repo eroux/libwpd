@@ -27,6 +27,7 @@
 #include "WP5UnsupportedVariableLengthGroup.h"
 #include "libwpd_internal.h"
 #include <cstdio>
+#include <vector>
 
 static void dumpHexBytes(const unsigned char *data, unsigned len)
 {
