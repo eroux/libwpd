@@ -26,7 +26,6 @@
 
 #include "WP5UnsupportedFixedLengthGroup.h"
 #include "WP5FileStructure.h"
-#include "WP5Helper.h"
 #include "libwpd_internal.h"
 #include <cstdio>
 #include <vector>
